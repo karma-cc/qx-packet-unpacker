@@ -72,6 +72,17 @@
           <div class="search-row">
             <input id="searchInput" placeholder="搜索 URL、方法、状态码" />
           </div>
+          <div id="filterBar" class="filter-bar" aria-label="请求筛选标签">
+            <button class="filter-chip active" data-filter="all">all</button>
+            <button class="filter-chip" data-filter="json">json</button>
+            <button class="filter-chip" data-filter="get">get</button>
+            <button class="filter-chip" data-filter="post">post</button>
+            <button class="filter-chip" data-filter="image">image</button>
+            <button class="filter-chip" data-filter="200">200</button>
+            <button class="filter-chip" data-filter="script">script</button>
+            <button class="filter-chip" data-filter="mitm">mitm</button>
+            <button class="filter-chip" data-filter="rewrite">rewrite</button>
+          </div>
           <div id="requestList" class="request-items">
             <div class="empty-state">解析后会显示每一条抓包。</div>
           </div>

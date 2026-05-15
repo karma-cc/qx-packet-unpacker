@@ -6,6 +6,7 @@ const state = {
   filteredRecords: [],
   selectedId: null,
   activeTab: "summary",
+  activeFilters: new Set(),
   objectUrls: [],
 };
 
@@ -26,6 +27,7 @@ const elements = {
   binaryCount: document.querySelector("#binaryCount"),
   listCount: document.querySelector("#listCount"),
   searchInput: document.querySelector("#searchInput"),
+  filterBar: document.querySelector("#filterBar"),
   requestList: document.querySelector("#requestList"),
   detailTitle: document.querySelector("#detailTitle"),
   detailSubtitle: document.querySelector("#detailSubtitle"),
@@ -39,6 +41,11 @@ elements.convertButton.addEventListener("click", parseAndRender);
 elements.downloadButton.addEventListener("click", downloadResult);
 elements.clearButton.addEventListener("click", clearAll);
 elements.searchInput.addEventListener("input", renderRequestList);
+elements.filterBar.addEventListener("click", (event) => {
+  const button = event.target.closest(".filter-chip");
+  if (!button) return;
+  toggleFilter(button.dataset.filter);
+});
 
 for (const tab of elements.tabs) {
   tab.addEventListener("click", () => {
@@ -111,12 +118,17 @@ async function parseAndRender() {
 
   try {
     const result = await convertQxFiles(state.files);
+    result.records = result.records.map((record) => ({
+      ...record,
+      tags: classifyRecord(record),
+    }));
     state.result = result;
     state.filteredRecords = result.records;
     state.selectedId = result.records[0]?.id ?? null;
     state.activeTab = "summary";
 
     setStats(result.stats);
+    renderFilterBar();
     renderTabs();
     renderRequestList();
     renderDetail();
@@ -139,14 +151,42 @@ function renderRequestList() {
 
   const query = elements.searchInput.value.trim().toLowerCase();
   state.filteredRecords = state.result.records.filter((record) => {
-    const text = `${record.id} ${record.method} ${record.status} ${record.basic}`.toLowerCase();
+    const matchesFilters =
+      state.activeFilters.size === 0 ||
+      Array.from(state.activeFilters).every((filter) => record.tags.includes(filter));
+    if (!matchesFilters) return false;
+
+    const text = [
+      record.id,
+      record.method,
+      record.status,
+      record.basic,
+      safeHost(record.basic),
+      record.requestLine,
+      record.responseLine,
+      record.requestHeadersText,
+      record.responseHeadersText,
+      record.tags.join(" "),
+    ]
+      .join(" ")
+      .toLowerCase();
     return text.includes(query);
   });
 
   elements.listCount.textContent = `${state.filteredRecords.length} 条`;
 
+  if (
+    state.filteredRecords.length > 0 &&
+    !state.filteredRecords.some((record) => record.id === state.selectedId)
+  ) {
+    state.selectedId = state.filteredRecords[0].id;
+    renderDetail();
+  }
+
   if (state.filteredRecords.length === 0) {
     elements.requestList.innerHTML = `<div class="empty-state">没有匹配的请求。</div>`;
+    state.selectedId = null;
+    renderDetail();
     return;
   }
 
@@ -165,6 +205,9 @@ function renderRequestList() {
 
 function requestItemHtml(record, selected) {
   const host = safeHost(record.basic);
+  const visibleTags = record.tags
+    .filter((tag) => ["json", "image", "script", "mitm", "rewrite"].includes(tag))
+    .slice(0, 4);
   return `
     <button class="request-item ${selected ? "selected" : ""}" data-id="${record.id}">
       <span class="request-line">
@@ -174,8 +217,45 @@ function requestItemHtml(record, selected) {
       </span>
       <span class="request-url">${escapeHtml(record.basic || "(未知 URL)")}</span>
       <span class="request-host">${escapeHtml(host)}</span>
+      ${
+        visibleTags.length
+          ? `<span class="request-tags">${visibleTags
+              .map((tag) => `<i>${escapeHtml(tag)}</i>`)
+              .join("")}</span>`
+          : ""
+      }
     </button>
   `;
+}
+
+function toggleFilter(filter) {
+  if (filter === "all") {
+    state.activeFilters.clear();
+  } else if (state.activeFilters.has(filter)) {
+    state.activeFilters.delete(filter);
+  } else {
+    state.activeFilters.add(filter);
+  }
+  renderFilterBar();
+  renderRequestList();
+}
+
+function renderFilterBar() {
+  if (!state.result) {
+    for (const chip of elements.filterBar.querySelectorAll(".filter-chip")) {
+      chip.classList.toggle("active", chip.dataset.filter === "all");
+      chip.removeAttribute("data-count");
+    }
+    return;
+  }
+
+  const counts = countTags(state.result.records);
+  for (const chip of elements.filterBar.querySelectorAll(".filter-chip")) {
+    const filter = chip.dataset.filter;
+    const active = filter === "all" ? state.activeFilters.size === 0 : state.activeFilters.has(filter);
+    chip.classList.toggle("active", active);
+    chip.dataset.count = filter === "all" ? state.result.records.length : counts.get(filter) || 0;
+  }
 }
 
 function renderTabs() {
@@ -216,6 +296,7 @@ function summaryHtml(record) {
     ["URL", record.basic || "(未知)"],
     ["请求", record.requestLine || "(无请求行)"],
     ["响应", record.responseLine || "(无响应行)"],
+    ["标签", record.tags?.join(", ") || "(无)"],
     ["请求体", bodySummary(record.requestBody)],
     ["响应体", bodySummary(record.responseBody)],
   ];
@@ -299,6 +380,7 @@ function clearAll() {
   state.filteredRecords = [];
   state.selectedId = null;
   state.activeTab = "summary";
+  state.activeFilters.clear();
   elements.fileInput.value = "";
   elements.sourcePath.value = "";
   elements.searchInput.value = "";
@@ -313,6 +395,7 @@ function clearAll() {
   elements.detailContent.innerHTML = `<div class="empty-state">选择 qx 抓包目录并解析后，可以在这里逐条预览。</div>`;
   elements.listCount.textContent = "0 条";
   setStats();
+  renderFilterBar();
   renderTabs();
 }
 
@@ -340,6 +423,80 @@ function safeHost(url) {
   } catch {
     return "";
   }
+}
+
+function classifyRecord(record) {
+  const tags = new Set();
+  const method = record.method?.toLowerCase();
+  const status = String(record.status || "");
+  const url = record.basic || "";
+  const contentText = [
+    record.requestHeadersText,
+    record.responseHeadersText,
+    record.requestBody?.display,
+    record.responseBody?.display,
+    url,
+  ]
+    .join("\n")
+    .toLowerCase();
+
+  if (method) tags.add(method);
+  if (status) tags.add(status);
+
+  const requestMime = record.requestBody?.mimeType || record.requestBody?.contentType || "";
+  const responseMime = record.responseBody?.mimeType || record.responseBody?.contentType || "";
+  const mimeText = `${requestMime} ${responseMime}`.toLowerCase();
+
+  if (
+    record.requestBody?.note === "pretty-json" ||
+    record.responseBody?.note === "pretty-json" ||
+    mimeText.includes("json")
+  ) {
+    tags.add("json");
+  }
+
+  if (record.requestBody?.isImage || record.responseBody?.isImage || mimeText.includes("image/")) {
+    tags.add("image");
+  }
+
+  if (
+    mimeText.includes("javascript") ||
+    mimeText.includes("ecmascript") ||
+    /\.m?js(?:[?#]|$)/i.test(url)
+  ) {
+    tags.add("script");
+  }
+
+  if (url.startsWith("https://") || contentText.includes("mitm")) {
+    tags.add("mitm");
+  }
+
+  if (
+    contentText.includes("rewrite") ||
+    contentText.includes("url rewrite") ||
+    contentText.includes("script-response") ||
+    contentText.includes("script-request")
+  ) {
+    tags.add("rewrite");
+  }
+
+  return Array.from(tags).sort((a, b) => tagRank(a) - tagRank(b) || a.localeCompare(b));
+}
+
+function tagRank(tag) {
+  const order = ["get", "post", "200", "json", "image", "script", "mitm", "rewrite"];
+  const index = order.indexOf(tag);
+  return index === -1 ? 99 : index;
+}
+
+function countTags(records) {
+  const counts = new Map();
+  for (const record of records) {
+    for (const tag of record.tags || []) {
+      counts.set(tag, (counts.get(tag) || 0) + 1);
+    }
+  }
+  return counts;
 }
 
 function escapeHtml(value) {

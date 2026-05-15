@@ -31,7 +31,7 @@ input {
 }
 
 .shell {
-  width: min(980px, calc(100vw - 48px));
+  width: min(1280px, calc(100vw - 48px));
   margin: 0 auto;
   padding: 48px 0 36px;
 }
@@ -220,14 +220,17 @@ input {
 
 .viewer {
   display: grid;
-  grid-template-columns: minmax(260px, 34%) 1fr;
+  grid-template-columns: minmax(300px, 36%) minmax(0, 1fr);
   gap: 16px;
+  height: clamp(580px, calc(100vh - 220px), 780px);
   margin-bottom: 16px;
+  position: sticky;
+  top: 16px;
 }
 
 .request-list,
 .detail-pane {
-  min-height: 520px;
+  min-height: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.82);
@@ -237,7 +240,12 @@ input {
 
 .request-list {
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+
+.detail-pane {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .preview-head {
@@ -272,6 +280,54 @@ input {
   border-bottom: 1px solid var(--line);
 }
 
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 112px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  overflow: auto;
+  background: rgba(251, 250, 247, 0.72);
+}
+
+.filter-chip {
+  min-height: 30px;
+  padding: 0 9px;
+  border-color: var(--line);
+  color: #233c39;
+  background: #ffffff;
+  font-size: 12px;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+.filter-chip::after {
+  content: attr(data-count);
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #eee9df;
+  font-size: 11px;
+}
+
+.filter-chip:hover,
+.filter-chip.active {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.filter-chip.active::after,
+.filter-chip:hover::after {
+  color: #e9fffb;
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .request-items {
   min-height: 0;
   overflow: auto;
@@ -280,7 +336,7 @@ input {
 
 .request-item {
   width: 100%;
-  min-height: 86px;
+  min-height: 96px;
   display: grid;
   gap: 6px;
   padding: 12px;
@@ -349,6 +405,25 @@ input {
   font-size: 12px;
 }
 
+.request-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.request-tags i {
+  min-height: 20px;
+  display: inline-grid;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  color: #4f4a40;
+  background: #efe9dc;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .tabs {
   display: flex;
   gap: 8px;
@@ -374,7 +449,7 @@ input {
 }
 
 .detail-content {
-  height: 404px;
+  min-height: 0;
   overflow: auto;
   padding: 16px;
   background: #fbfaf7;
@@ -502,6 +577,16 @@ pre {
   .viewer {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .viewer {
+    height: auto;
+    position: static;
+  }
+
+  .request-list,
+  .detail-pane {
+    height: min(620px, 78vh);
   }
 
   .stats {
