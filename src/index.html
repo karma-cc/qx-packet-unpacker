@@ -20,19 +20,20 @@
 
       <section id="dropZone" class="drop-zone">
         <div class="drop-copy">
-          <strong>拖入 qx 抓包导出目录</strong>
-          <span>支持包含 1/basic、1/request_headers、1/response_body 这类结构的文件夹</span>
+          <strong>拖入 qx 抓包目录或 TXT 文件</strong>
+          <span>支持目录结构、单文件整理 TXT、Proxyman HTTP_Traffic TXT</span>
         </div>
-        <button id="chooseButton">选择目录</button>
+        <button id="chooseButton">选择文件/目录</button>
       </section>
 
       <section class="panel">
         <div class="field">
-          <label for="sourcePath">源目录</label>
-          <input id="sourcePath" readonly placeholder="还没有选择目录" />
+          <label for="sourcePath">来源</label>
+          <input id="sourcePath" readonly placeholder="还没有选择目录或文件" />
         </div>
         <div class="actions">
           <button id="convertButton" disabled>解包并生成 TXT</button>
+          <button id="analyzeAdButton" class="secondary" disabled>分析去广告重写</button>
           <button id="openButton" class="secondary" disabled>打开结果</button>
         </div>
       </section>

@@ -18,13 +18,14 @@
 
       <section id="dropZone" class="drop-zone">
         <div class="drop-copy">
-          <strong>选择 qx 抓包导出目录</strong>
-          <span>所有解包都在你的浏览器本机完成，文件不会上传到服务器。</span>
+          <strong>选择 qx 抓包目录或 TXT 文件</strong>
+          <span>支持 qx 导出目录、单文件整理 TXT、Proxyman HTTP_Traffic TXT；全程本机处理。</span>
         </div>
-        <button id="chooseButton">选择目录</button>
+        <button id="chooseButton">选择文件/目录</button>
         <input
           id="fileInput"
           type="file"
+          accept=".txt,text/plain"
           webkitdirectory
           directory
           multiple
@@ -34,11 +35,13 @@
 
       <section class="panel">
         <div class="field">
-          <label for="sourcePath">源目录</label>
-          <input id="sourcePath" readonly placeholder="还没有选择目录" />
+          <label for="sourcePath">来源</label>
+          <input id="sourcePath" readonly placeholder="还没有选择目录或文件" />
         </div>
         <div class="actions">
           <button id="convertButton" disabled>解析并查看</button>
+          <button id="analyzeAdButton" class="secondary" disabled>分析去广告重写</button>
+          <button id="downloadAdButton" class="secondary" disabled>下载重写 TXT</button>
           <button id="downloadButton" class="secondary" disabled>下载 TXT</button>
           <button id="clearButton" class="ghost">清空</button>
         </div>
@@ -82,6 +85,7 @@
             <button class="filter-chip" data-filter="script">script</button>
             <button class="filter-chip" data-filter="mitm">mitm</button>
             <button class="filter-chip" data-filter="rewrite">rewrite</button>
+            <button class="filter-chip" data-filter="ad-candidate">ad</button>
           </div>
           <div id="requestList" class="request-items">
             <div class="empty-state">解析后会显示每一条抓包。</div>
@@ -114,7 +118,7 @@
           <h2>TXT 输出预览</h2>
           <span id="txtStatusText">可选下载</span>
         </div>
-        <pre id="preview">选择 qx 抓包目录后，生成的 txt 预览会显示在这里。</pre>
+        <pre id="preview">选择 qx 抓包目录或 TXT 文件后，生成的 txt 预览会显示在这里。</pre>
       </section>
     </main>
 

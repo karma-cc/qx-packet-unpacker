@@ -8,6 +8,7 @@
 - 自动处理响应体的 `Transfer-Encoding: chunked`。
 - 自动解压 `Content-Encoding: gzip`、`br`、`deflate`。
 - JSON 自动格式化，二进制内容用 Base64 保留。
+- 可一键分析抓包并生成 Quantumult X `[rewrite_local]`、`[mitm]` 格式的去广告重写候选 txt。
 - 支持桌面 app 操作，也支持命令行批量转换。
 
 ## 运行

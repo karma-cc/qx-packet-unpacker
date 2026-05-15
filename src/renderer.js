@@ -7,6 +7,7 @@ const elements = {
   pickButton: document.querySelector("#pickButton"),
   chooseButton: document.querySelector("#chooseButton"),
   convertButton: document.querySelector("#convertButton"),
+  analyzeAdButton: document.querySelector("#analyzeAdButton"),
   openButton: document.querySelector("#openButton"),
   dropZone: document.querySelector("#dropZone"),
   sourcePath: document.querySelector("#sourcePath"),
@@ -21,6 +22,7 @@ const elements = {
 elements.pickButton.addEventListener("click", pickSource);
 elements.chooseButton.addEventListener("click", pickSource);
 elements.convertButton.addEventListener("click", convert);
+elements.analyzeAdButton.addEventListener("click", analyzeAdRewrite);
 elements.openButton.addEventListener("click", () => window.qxApp.openOutput(state.outputPath));
 
 for (const eventName of ["dragenter", "dragover"]) {
@@ -53,6 +55,7 @@ function setSource(dir) {
   state.outputPath = "";
   elements.sourcePath.value = dir;
   elements.convertButton.disabled = false;
+  elements.analyzeAdButton.disabled = false;
   elements.openButton.disabled = true;
   elements.statusText.textContent = "已选择目录";
   elements.preview.textContent = "准备解包。";
@@ -86,8 +89,36 @@ async function convert() {
   }
 }
 
+async function analyzeAdRewrite() {
+  if (!state.sourceDir) return;
+
+  setBusy(true);
+  elements.statusText.textContent = "正在分析广告请求并生成 QX 重写...";
+  elements.preview.textContent = "处理中，请稍等。";
+
+  try {
+    const result = await window.qxApp.analyzeAdRewrite(state.sourceDir);
+    if (!result) {
+      elements.statusText.textContent = "已取消保存";
+      return;
+    }
+
+    state.outputPath = result.outputPath;
+    setStats(result.stats);
+    elements.openButton.disabled = false;
+    elements.statusText.textContent = `已生成 ${result.stats.adCandidates} 条候选规则：${result.outputPath}`;
+    elements.preview.textContent = result.preview;
+  } catch (error) {
+    elements.statusText.textContent = "分析失败";
+    elements.preview.textContent = error?.message || String(error);
+  } finally {
+    setBusy(false);
+  }
+}
+
 function setBusy(isBusy) {
   elements.convertButton.disabled = isBusy || !state.sourceDir;
+  elements.analyzeAdButton.disabled = isBusy || !state.sourceDir;
   elements.chooseButton.disabled = isBusy;
   elements.pickButton.disabled = isBusy;
 }

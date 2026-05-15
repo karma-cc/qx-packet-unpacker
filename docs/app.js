@@ -14,7 +14,9 @@ const elements = {
   fileInput: document.querySelector("#fileInput"),
   chooseButton: document.querySelector("#chooseButton"),
   convertButton: document.querySelector("#convertButton"),
+  analyzeAdButton: document.querySelector("#analyzeAdButton"),
   downloadButton: document.querySelector("#downloadButton"),
+  downloadAdButton: document.querySelector("#downloadAdButton"),
   clearButton: document.querySelector("#clearButton"),
   dropZone: document.querySelector("#dropZone"),
   statusText: document.querySelector("#statusText"),
@@ -38,7 +40,9 @@ const elements = {
 elements.chooseButton.addEventListener("click", () => elements.fileInput.click());
 elements.fileInput.addEventListener("change", () => setFiles(elements.fileInput.files));
 elements.convertButton.addEventListener("click", parseAndRender);
+elements.analyzeAdButton.addEventListener("click", analyzeAdRewrite);
 elements.downloadButton.addEventListener("click", downloadResult);
+elements.downloadAdButton.addEventListener("click", downloadAdRewrite);
 elements.clearButton.addEventListener("click", clearAll);
 elements.searchInput.addEventListener("input", renderRequestList);
 elements.filterBar.addEventListener("click", (event) => {
@@ -94,7 +98,7 @@ function setFiles(fileList) {
   const firstPath = state.files[0].webkitRelativePath || state.files[0].name;
   const rootName = firstPath.split("/")[0] || "已选择文件";
   elements.sourcePath.value = `${rootName} (${state.files.length} 个文件)`;
-  elements.statusText.textContent = "已读取目录，准备解析";
+  elements.statusText.textContent = "已读取来源，准备解析";
   elements.txtStatusText.textContent = "等待解析";
   elements.preview.textContent = "点击“解析并查看”开始处理。";
   elements.requestList.innerHTML = `<div class="empty-state">点击“解析并查看”后会显示每一条抓包。</div>`;
@@ -102,7 +106,9 @@ function setFiles(fileList) {
   elements.detailSubtitle.textContent = "选择一条请求查看内容";
   elements.detailContent.innerHTML = `<div class="empty-state">解析后可以在这里查看请求和响应。</div>`;
   elements.convertButton.disabled = false;
+  elements.analyzeAdButton.disabled = false;
   elements.downloadButton.disabled = true;
+  elements.downloadAdButton.disabled = true;
   setStats();
   elements.listCount.textContent = "0 条";
 }
@@ -136,6 +142,7 @@ async function parseAndRender() {
     elements.statusText.textContent = `已解析 ${result.stats.requests} 条请求`;
     elements.txtStatusText.textContent = `可下载 ${result.fileName}`;
     elements.downloadButton.disabled = false;
+    elements.downloadAdButton.disabled = false;
   } catch (error) {
     elements.statusText.textContent = "解析失败";
     elements.txtStatusText.textContent = "解析失败";
@@ -144,6 +151,27 @@ async function parseAndRender() {
   } finally {
     setBusy(false);
   }
+}
+
+async function analyzeAdRewrite() {
+  if (state.files.length === 0) return;
+  if (!state.result) {
+    await parseAndRender();
+    if (!state.result) return;
+  }
+
+  state.activeFilters.clear();
+  for (const record of state.result.records) {
+    const isCandidate = state.result.adRewrite.text.includes(`# #${record.id} `);
+    record.tags = Array.from(new Set([...(record.tags || []), ...(isCandidate ? ["ad-candidate"] : [])]));
+  }
+
+  renderFilterBar();
+  renderRequestList();
+  elements.preview.textContent = state.result.adRewrite.text;
+  elements.statusText.textContent = `已生成 ${state.result.adRewrite.stats.candidates} 条去广告重写候选`;
+  elements.txtStatusText.textContent = `可下载 ${state.result.adRewriteFileName}`;
+  elements.downloadAdButton.disabled = false;
 }
 
 function renderRequestList() {
@@ -206,7 +234,7 @@ function renderRequestList() {
 function requestItemHtml(record, selected) {
   const host = safeHost(record.basic);
   const visibleTags = record.tags
-    .filter((tag) => ["json", "image", "script", "mitm", "rewrite"].includes(tag))
+    .filter((tag) => ["json", "image", "script", "mitm", "rewrite", "ad-candidate"].includes(tag))
     .slice(0, 4);
   return `
     <button class="request-item ${selected ? "selected" : ""}" data-id="${record.id}">
@@ -373,6 +401,17 @@ function downloadResult() {
   URL.revokeObjectURL(url);
 }
 
+function downloadAdRewrite() {
+  if (!state.result) return;
+  const blob = new Blob([state.result.adRewrite.text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = state.result.adRewriteFileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function clearAll() {
   cleanupUrls();
   state.files = [];
@@ -385,7 +424,9 @@ function clearAll() {
   elements.sourcePath.value = "";
   elements.searchInput.value = "";
   elements.convertButton.disabled = true;
+  elements.analyzeAdButton.disabled = true;
   elements.downloadButton.disabled = true;
+  elements.downloadAdButton.disabled = true;
   elements.statusText.textContent = "等待选择目录";
   elements.txtStatusText.textContent = "可选下载";
   elements.preview.textContent = "选择 qx 抓包目录后，生成的 txt 预览会显示在这里。";
@@ -402,6 +443,7 @@ function clearAll() {
 function setBusy(isBusy) {
   elements.chooseButton.disabled = isBusy;
   elements.convertButton.disabled = isBusy || state.files.length === 0;
+  elements.analyzeAdButton.disabled = isBusy || state.files.length === 0;
   elements.clearButton.disabled = isBusy;
 }
 
@@ -484,7 +526,7 @@ function classifyRecord(record) {
 }
 
 function tagRank(tag) {
-  const order = ["get", "post", "200", "json", "image", "script", "mitm", "rewrite"];
+  const order = ["get", "post", "200", "json", "image", "script", "mitm", "rewrite", "ad-candidate"];
   const index = order.indexOf(tag);
   return index === -1 ? 99 : index;
 }

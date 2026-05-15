@@ -1,6 +1,6 @@
 const path = require("node:path");
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
-const { convertCaptureDirectory } = require("./converter");
+const { analyzeCaptureDirectoryForQxAdRewrite, convertCaptureDirectory } = require("./converter");
 
 let mainWindow;
 
@@ -35,17 +35,22 @@ app.on("activate", () => {
 
 ipcMain.handle("pick-source", async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: "选择 QX 抓包导出目录",
-    properties: ["openDirectory"],
+    title: "选择 QX 抓包目录或 TXT 文件",
+    properties: ["openDirectory", "openFile"],
+    filters: [
+      { name: "Capture", extensions: ["txt"] },
+      { name: "All Files", extensions: ["*"] },
+    ],
   });
   return result.canceled ? null : result.filePaths[0];
 });
 
 ipcMain.handle("convert", async (_event, sourceDir) => {
   const defaultName = `${new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")}_qx_可读整理.txt`;
+  const defaultDir = path.extname(sourceDir) ? path.dirname(sourceDir) : sourceDir;
   const save = await dialog.showSaveDialog(mainWindow, {
     title: "保存整理后的 txt",
-    defaultPath: path.join(sourceDir, defaultName),
+    defaultPath: path.join(defaultDir, defaultName),
     filters: [{ name: "Text", extensions: ["txt"] }],
   });
 
@@ -59,6 +64,32 @@ ipcMain.handle("convert", async (_event, sourceDir) => {
     outputPath: result.outputPath,
     stats: result.stats,
     preview: result.report.slice(0, 12000),
+  };
+});
+
+ipcMain.handle("analyze-ad-rewrite", async (_event, sourceDir) => {
+  const defaultName = `${new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")}_qx_去广告重写.txt`;
+  const defaultDir = path.extname(sourceDir) ? path.dirname(sourceDir) : sourceDir;
+  const save = await dialog.showSaveDialog(mainWindow, {
+    title: "保存 QX 去广告重写 txt",
+    defaultPath: path.join(defaultDir, defaultName),
+    filters: [{ name: "Text", extensions: ["txt"] }],
+  });
+
+  if (save.canceled || !save.filePath) return null;
+
+  const result = await analyzeCaptureDirectoryForQxAdRewrite(sourceDir, {
+    outputPath: save.filePath,
+  });
+
+  return {
+    outputPath: result.outputPath,
+    stats: {
+      ...result.stats,
+      adCandidates: result.adRewrite.stats.candidates,
+      adHosts: result.adRewrite.stats.hosts,
+    },
+    preview: result.adRewrite.text.slice(0, 12000),
   };
 });
 
