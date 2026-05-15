@@ -38,7 +38,7 @@
           <input id="sourcePath" readonly placeholder="还没有选择目录" />
         </div>
         <div class="actions">
-          <button id="convertButton" disabled>解包并生成 TXT</button>
+          <button id="convertButton" disabled>解析并查看</button>
           <button id="downloadButton" class="secondary" disabled>下载 TXT</button>
           <button id="clearButton" class="ghost">清空</button>
         </div>
@@ -63,10 +63,45 @@
         </div>
       </section>
 
-      <section class="preview-wrap">
+      <section class="viewer">
+        <aside class="request-list">
+          <div class="preview-head">
+            <h2>请求列表</h2>
+            <span id="listCount">0 条</span>
+          </div>
+          <div class="search-row">
+            <input id="searchInput" placeholder="搜索 URL、方法、状态码" />
+          </div>
+          <div id="requestList" class="request-items">
+            <div class="empty-state">解析后会显示每一条抓包。</div>
+          </div>
+        </aside>
+
+        <section class="detail-pane">
+          <div class="preview-head detail-head">
+            <div>
+              <h2 id="detailTitle">详情</h2>
+              <p id="detailSubtitle">选择一条请求查看内容</p>
+            </div>
+            <span id="statusText">等待选择目录</span>
+          </div>
+          <div class="tabs" role="tablist" aria-label="抓包详情">
+            <button class="tab active" data-tab="summary">概要</button>
+            <button class="tab" data-tab="requestHeaders">请求头</button>
+            <button class="tab" data-tab="requestBody">请求体</button>
+            <button class="tab" data-tab="responseHeaders">响应头</button>
+            <button class="tab" data-tab="responseBody">响应体</button>
+          </div>
+          <div id="detailContent" class="detail-content">
+            <div class="empty-state">选择 qx 抓包目录并解析后，可以在这里逐条预览。</div>
+          </div>
+        </section>
+      </section>
+
+      <section class="preview-wrap compact">
         <div class="preview-head">
-          <h2>预览</h2>
-          <span id="statusText">等待选择目录</span>
+          <h2>TXT 输出预览</h2>
+          <span id="txtStatusText">可选下载</span>
         </div>
         <pre id="preview">选择 qx 抓包目录后，生成的 txt 预览会显示在这里。</pre>
       </section>

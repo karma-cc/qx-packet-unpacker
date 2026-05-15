@@ -99,6 +99,10 @@ async function decodeBody(raw, headers, options) {
     return {
       rawBytes: 0,
       decodedBytes: 0,
+      decodedData: new Uint8Array(),
+      contentType: "",
+      mimeType: "",
+      isImage: false,
       text: "",
       display: "(空)",
       note: "empty",
@@ -140,12 +144,19 @@ async function decodeBody(raw, headers, options) {
   }
 
   const textInfo = bufferToReadableText(bytes, headers);
+  const contentType = headerValue(headers, "content-type");
+  const mimeType = contentType.split(";")[0].trim().toLowerCase() || detectImageMime(bytes);
+  const isImage = mimeType.startsWith("image/");
   return {
     rawBytes: raw.length,
     decodedBytes: bytes.length,
+    decodedData: bytes,
+    contentType,
+    mimeType,
+    isImage,
     text: textInfo.text,
-    display: textInfo.display,
-    note: textInfo.note,
+    display: isImage ? imageDisplay(bytes, mimeType) : textInfo.display,
+    note: isImage ? "image-base64" : textInfo.note,
     encodingSteps: steps,
   };
 }
@@ -244,6 +255,34 @@ function bufferToReadableText(buffer, headers) {
     display: pretty || "(空)",
     note: pretty === text ? "text" : "pretty-json",
   };
+}
+
+function imageDisplay(buffer, mimeType) {
+  return `[图片内容 ${buffer.length} bytes，${mimeType || "unknown"}，Base64]\n${bytesToBase64(buffer)}`;
+}
+
+function detectImageMime(bytes) {
+  if (bytes.length >= 8) {
+    const png = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    if (png.every((value, index) => bytes[index] === value)) return "image/png";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (bytes.length >= 6) {
+    const header = asciiFromBytes(bytes.subarray(0, 6));
+    if (header === "GIF87a" || header === "GIF89a") return "image/gif";
+  }
+  if (bytes.length >= 12) {
+    const riff = asciiFromBytes(bytes.subarray(0, 4));
+    const webp = asciiFromBytes(bytes.subarray(8, 12));
+    if (riff === "RIFF" && webp === "WEBP") return "image/webp";
+  }
+  if (bytes.length >= 4) {
+    const avif = asciiFromBytes(bytes.subarray(4, 12));
+    if (avif === "ftypavif") return "image/avif";
+  }
+  return "";
 }
 
 function prettyPrintText(text) {
