@@ -1,0 +1,44 @@
+{
+  "name": "qx-packet-unpacker",
+  "version": "0.1.0",
+  "description": "A macOS desktop app that unpacks Quantumult X capture folders into readable txt reports.",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "convert": "node src/cli.js",
+    "test:sample": "node src/cli.js \"qx 抓包原始文件示例\" --out \"qx 抓包原始文件示例_自动解包.txt\"",
+    "test:web": "node scripts/test-web-converter.mjs",
+    "web": "http-server docs -p 4173 -c-1",
+    "package:mac": "electron-builder --mac"
+  },
+  "keywords": [
+    "quantumult-x",
+    "packet-capture",
+    "macos",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "brotli-wasm": "^3.0.1",
+    "electron": "^37.2.3",
+    "electron-builder": "^26.0.12",
+    "http-server": "^14.1.1"
+  },
+  "build": {
+    "appId": "com.local.qxpacketunpacker",
+    "productName": "QX Packet Unpacker",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ]
+  }
+}

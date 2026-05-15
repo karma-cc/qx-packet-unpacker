@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+dist/
+*.log
+npm-debug.log*
+
+# Local/private capture data
+qx 抓包原始文件示例/
+*_自动解包.txt
+*_可读整理*.txt
+
+# Electron builder output/cache
+out/
+release/
